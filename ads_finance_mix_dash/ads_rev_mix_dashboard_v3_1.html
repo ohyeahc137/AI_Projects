@@ -1,0 +1,2266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ads Revenue Mix Analysis Dashboard</title>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #0064D2 0%, #0654BA 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #E53238 0%, #F5AF02 50%, #86B817 100%);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.95;
+            font-weight: 300;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 25px;
+            border: 1px solid #e5e5e5;
+            border-left: 4px solid #0064D2;
+        }
+
+        .section-title {
+            font-size: 1.4rem;
+            color: #111820;
+            margin-bottom: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::before {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 24px;
+            background: #F5AF02;
+            border-radius: 3px;
+        }
+
+        .upload-area {
+            border: 2px dashed #0064D2;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            background: #f7fafc;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #E53238;
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(0, 100, 210, 0.1);
+        }
+
+        .upload-area.dragover {
+            background: #e6f2ff;
+            border-color: #0064D2;
+            border-style: solid;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            background: #0064D2;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0, 100, 210, 0.2);
+        }
+
+        .btn:hover {
+            background: #0654BA;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 100, 210, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba(0, 100, 210, 0.2);
+        }
+
+        .btn-success {
+            background: #86B817;
+            box-shadow: 0 2px 8px rgba(134, 184, 23, 0.2);
+        }
+
+        .btn-success:hover {
+            background: #75a312;
+            box-shadow: 0 4px 12px rgba(134, 184, 23, 0.3);
+        }
+
+        .btn-export {
+            background: #E53238;
+            box-shadow: 0 2px 8px rgba(229, 50, 56, 0.2);
+        }
+
+        .btn-export:hover {
+            background: #d12229;
+            box-shadow: 0 4px 12px rgba(229, 50, 56, 0.3);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-size: 0.95rem;
+        }
+
+        .form-group select,
+        .form-group input {
+            padding: 10px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: #0064D2;
+            box-shadow: 0 0 0 3px rgba(0, 100, 210, 0.1);
+        }
+
+        select[multiple] {
+            min-height: 120px;
+        }
+
+        .info-box {
+            background: #e6f2ff;
+            border-left: 4px solid #0064D2;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #0654BA;
+        }
+
+        .success-box {
+            background: #f0f8e8;
+            border-left: 4px solid #86B817;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            color: #5a7810;
+        }
+
+        .metric-formula {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            border: 1px solid #e1e8ed;
+        }
+
+        .results-container {
+            margin-top: 30px;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .summary-card {
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e5e5e5;
+            border-top: 3px solid #0064D2;
+            transition: all 0.2s ease;
+        }
+
+        .summary-card:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .summary-card h3 {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-bottom: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .summary-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #111820;
+        }
+
+        .summary-card .delta {
+            font-size: 1rem;
+            margin-top: 8px;
+            font-weight: 600;
+        }
+
+        .delta.positive {
+            color: #86B817;
+        }
+
+        .delta.negative {
+            color: #E53238;
+        }
+
+        .dimension-section {
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            border: 1px solid #e5e5e5;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+        }
+
+        .dimension-header {
+            background: #f7fafc;
+            padding: 16px 24px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #0064D2;
+            transition: all 0.2s ease;
+        }
+
+        .dimension-header:hover {
+            background: #e6f2ff;
+            border-left-color: #E53238;
+        }
+
+        .dimension-header h3 {
+            font-size: 1.05rem;
+            color: #111820;
+            font-weight: 600;
+        }
+
+        .dimension-toggle {
+            font-size: 1.3rem;
+            color: #0064D2;
+            transition: transform 0.2s ease;
+            font-weight: bold;
+        }
+
+        .dimension-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .dimension-content {
+            max-height: 2000px;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .dimension-content.collapsed {
+            max-height: 0;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+        }
+
+        .results-table th {
+            background: linear-gradient(135deg, #0064D2 0%, #0654BA 100%);
+            color: white;
+            padding: 14px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .results-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e5e5;
+            font-size: 0.9rem;
+            color: #495057;
+        }
+
+        .results-table tr:hover {
+            background: #f7fafc;
+        }
+
+        .results-table tr.total-row {
+            background: #fff9e6;
+            font-weight: bold;
+            border-top: 2px solid #F5AF02;
+            border-bottom: 2px solid #F5AF02;
+        }
+
+        .results-table tr.total-row:hover {
+            background: #fff4d6;
+        }
+
+        .results-table tr.total-row td {
+            color: #111820;
+        }
+
+        .percentage {
+            font-family: 'Courier New', monospace;
+        }
+
+        .positive-effect {
+            color: #86B817;
+            font-weight: 600;
+        }
+
+        .negative-effect {
+            color: #E53238;
+            font-weight: 600;
+        }
+
+        .positive-effect-strong {
+            color: #2d5016;
+            background: linear-gradient(135deg, #e8f5e0 0%, #d4ecc5 100%);
+            font-weight: 700;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border-left: 3px solid #86B817;
+            box-shadow: 0 2px 4px rgba(134, 184, 23, 0.15);
+        }
+
+        .negative-effect-strong {
+            color: #7a1418;
+            background: linear-gradient(135deg, #ffe5e6 0%, #ffd0d2 100%);
+            font-weight: 700;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border-left: 3px solid #E53238;
+            box-shadow: 0 2px 4px rgba(229, 50, 56, 0.15);
+        }
+
+        .chart-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-top: 30px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 500px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .collapsible-section {
+            position: relative;
+        }
+
+        .collapse-toggle {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .collapse-toggle:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .collapse-toggle .arrow {
+            transition: transform 0.3s ease;
+            font-size: 1.2rem;
+        }
+
+        .collapse-toggle.collapsed .arrow {
+            transform: rotate(-90deg);
+        }
+
+        .collapsible-content {
+            overflow: hidden;
+            transition: max-height 0.4s ease, opacity 0.3s ease;
+        }
+
+        .collapsible-content.collapsed {
+            max-height: 0 !important;
+            opacity: 0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+            font-size: 1.2rem;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #0064D2;
+            border-right: 4px solid #E53238;
+            border-bottom: 4px solid #F5AF02;
+            border-left: 4px solid #86B817;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .data-preview {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            max-height: 300px;
+            overflow: auto;
+        }
+
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .preview-table th,
+        .preview-table td {
+            padding: 8px;
+            border: 1px solid #e1e8ed;
+            text-align: left;
+        }
+
+        .preview-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Ads Revenue Mix Analysis Dashboard</h1>
+            <p>Analyze advertising revenue mix with performance and mix effect decomposition</p>
+        </div>
+
+        <div class="content">
+            <!-- Collapsible Data Input Section -->
+            <div class="collapsible-section">
+                <button class="collapse-toggle" id="collapseToggle" onclick="toggleDataSection()">
+                    <span class="arrow">▼</span>
+                    <span>Data Input & Preview</span>
+                </button>
+
+                <div class="collapsible-content" id="collapsibleContent">
+                    <!-- Section 1: Data Upload -->
+                    <div class="section">
+                        <div class="section-title">📁 Data Input</div>
+                        <div class="upload-area" id="uploadArea">
+                            <div class="upload-icon">📂</div>
+                            <h3>Click to upload or drag and drop</h3>
+                            <p>Supports CSV and Excel files (.csv, .xlsx, .xls)</p>
+                            <input type="file" id="fileInput" class="file-input" accept=".csv,.xlsx,.xls">
+                            <button class="btn" onclick="document.getElementById('fileInput').click()">Select File</button>
+                        </div>
+                        <div id="uploadStatus"></div>
+                        <div id="dataPreview" class="hidden"></div>
+                    </div>
+                </div><!-- End collapsible-content -->
+            </div><!-- End collapsible-section -->
+
+            <!-- Configuration Sections (Hidden until data loaded) -->
+            <div id="configSections" class="hidden">
+                <!-- Session 1: Time Period Selection -->
+                <div class="section">
+                    <div class="section-title">📅 Session 1: Time Period Selection</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Per Time Period - From Date</label>
+                            <select id="perDateFrom"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Per Time Period - To Date</label>
+                            <select id="perDateTo"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Post Time Period - From Date</label>
+                            <select id="postDateFrom"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Post Time Period - To Date</label>
+                            <select id="postDateTo"></select>
+                        </div>
+                    </div>
+                    <div class="info-box" id="periodInfo"></div>
+                </div>
+
+                <!-- Session 2: Dimension Selection -->
+                <div class="section">
+                    <div class="section-title">🎯 Session 2: Dimension Selection</div>
+
+                    <h4 style="margin-bottom: 15px; color: #2c3e50;">Part 1: Must Select Dimensions</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>B2C_C2C (Hold Ctrl/Cmd for multiple)</label>
+                            <select id="b2cC2cSelect" multiple></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Seller_Cntry (Hold Ctrl/Cmd for multiple)</label>
+                            <select id="sellerCntrySelect" multiple></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Focus_Category (Hold Ctrl/Cmd for multiple)</label>
+                            <select id="focusCategorySelect" multiple></select>
+                        </div>
+                    </div>
+
+                    <h4 style="margin: 25px 0 15px; color: #2c3e50;">Part 2: Optional DIY Dimension</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>1st Dimension (Optional)</label>
+                            <select id="diyDim1">
+                                <option value="">None</option>
+                                <option value="B2C_C2C_FLAG">B2C_C2C</option>
+                                <option value="SELLER_CNTRY_GROUP">Seller_Cntry</option>
+                                <option value="FOCUS_CATEGORY">Focus_Category</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>2nd Dimension (Optional)</label>
+                            <select id="diyDim2">
+                                <option value="">None</option>
+                                <option value="B2C_C2C_FLAG">B2C_C2C</option>
+                                <option value="SELLER_CNTRY_GROUP">Seller_Cntry</option>
+                                <option value="FOCUS_CATEGORY">Focus_Category</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="info-box">
+                        💡 Select two different dimensions to create a combined analysis
+                    </div>
+                </div>
+
+                <!-- Session 3: Key Metrics Selection -->
+                <div class="section">
+                    <div class="section-title">📈 Session 3: Key Metrics Selection</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Select Key Metric</label>
+                            <select id="keyMetricSelect">
+                                <option value="PLG_Rev_Pen">PLG_Rev_Pen</option>
+                                <option value="PLP_Rev_Pen">PLP_Rev_Pen</option>
+                                <option value="PO_Rev_Pen">PO_Rev_Pen</option>
+                                <option value="PS_Rev_Pen">PS_Rev_Pen</option>
+                                <option value="Ads_Rev_Pen" selected>Ads_Rev_Pen</option>
+                                <option value="PLG_Adoption">PLG_Adoption</option>
+                                <option value="PLP_Adoption">PLP_Adoption</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="metricFormula" class="metric-formula"></div>
+                </div>
+
+                <!-- Run Analysis Button -->
+                <div style="text-align: center;">
+                    <button class="btn btn-success" onclick="runAnalysis()" style="font-size: 1.2rem; padding: 15px 50px;">
+                        🚀 Run Mix Analysis
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultsSection" class="hidden"></div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let rawData = [];
+        let analysisResults = null;
+        let chartInstance = null;
+
+        // Toggle data section collapse/expand
+        function toggleDataSection() {
+            const content = document.getElementById('collapsibleContent');
+            const toggle = document.getElementById('collapseToggle');
+
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                toggle.classList.remove('collapsed');
+                content.style.maxHeight = content.scrollHeight + 'px';
+            } else {
+                content.classList.add('collapsed');
+                toggle.classList.add('collapsed');
+                content.style.maxHeight = '0';
+            }
+        }
+
+        // Initialize collapsible content height on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            const content = document.getElementById('collapsibleContent');
+            if (content && !content.classList.contains('collapsed')) {
+                content.style.maxHeight = content.scrollHeight + 'px';
+            }
+        });
+
+        // Metric formulas
+        const metricFormulas = {
+            'PLG_Rev_Pen': 'PLG_REV_NET / GMV',
+            'PLP_Rev_Pen': 'PLP_REV_NET / GMV',
+            'PO_Rev_Pen': 'PO_REV_NET / GMV',
+            'PS_Rev_Pen': 'PS_REV_NET / GMV',
+            'Ads_Rev_Pen': '(PLG_REV_NET + PLP_REV_NET + PO_REV_NET + PS_REV_NET) / GMV',
+            'PLG_Adoption': 'PLG_ENABLED_GMV / GMV',
+            'PLP_Adoption': 'PLP_ENABLED_GMV / GMV'
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            const fileInput = document.getElementById('fileInput');
+            const uploadArea = document.getElementById('uploadArea');
+            const metricSelect = document.getElementById('keyMetricSelect');
+
+            fileInput.addEventListener('change', handleFileSelect);
+
+            // Drag and drop
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const file = e.dataTransfer.files[0];
+                if (file) {
+                    handleFile(file);
+                }
+            });
+
+            // Metric formula display
+            metricSelect.addEventListener('change', updateMetricFormula);
+            updateMetricFormula();
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            const fileName = file.name;
+            const fileExt = fileName.split('.').pop().toLowerCase();
+
+            if (fileExt === 'csv') {
+                parseCSV(file);
+            } else if (fileExt === 'xlsx' || fileExt === 'xls') {
+                parseExcel(file);
+            } else {
+                showError('Unsupported file format. Please upload CSV or Excel file.');
+            }
+        }
+
+        function parseCSV(file) {
+            Papa.parse(file, {
+                header: true,
+                dynamicTyping: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    processData(results.data);
+                },
+                error: function(error) {
+                    showError('Error parsing CSV: ' + error.message);
+                }
+            });
+        }
+
+        function parseExcel(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                    processData(jsonData);
+                } catch (error) {
+                    showError('Error parsing Excel: ' + error.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processData(data) {
+            rawData = data;
+
+            // Show success message
+            const status = document.getElementById('uploadStatus');
+            status.innerHTML = `<div class="success-box">✅ Data loaded successfully! ${data.length} rows loaded.</div>`;
+
+            // Show preview
+            showDataPreview(data.slice(0, 10));
+
+            // Populate dropdowns
+            populateTimeSelects();
+            populateDimensionSelects();
+
+            // Show configuration sections
+            document.getElementById('configSections').classList.remove('hidden');
+
+            // Update collapsible content height when data preview is shown
+            const content = document.getElementById('collapsibleContent');
+            if (content && !content.classList.contains('collapsed')) {
+                // Recalculate height to include the data preview
+                setTimeout(function() {
+                    content.style.maxHeight = content.scrollHeight + 'px';
+                }, 100);
+            }
+        }
+
+        function showDataPreview(data) {
+            if (data.length === 0) return;
+
+            const preview = document.getElementById('dataPreview');
+            const columns = Object.keys(data[0]);
+
+            let html = '<div class="data-preview"><h4 style="margin-bottom: 10px;">Data Preview (first 10 rows)</h4>';
+            html += '<table class="preview-table"><thead><tr>';
+
+            columns.forEach(col => {
+                html += `<th>${col}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+
+            data.forEach(row => {
+                html += '<tr>';
+                columns.forEach(col => {
+                    html += `<td>${row[col] !== null && row[col] !== undefined ? row[col] : ''}</td>`;
+                });
+                html += '</tr>';
+            });
+
+            html += '</tbody></table></div>';
+            preview.innerHTML = html;
+            preview.classList.remove('hidden');
+        }
+
+        function populateTimeSelects() {
+            const dates = [...new Set(rawData.map(row => row.RTL_WEEK_BEG_DT))];
+            dates.sort((a, b) => new Date(b) - new Date(a)); // Latest to earliest
+
+            const selects = ['perDateFrom', 'perDateTo', 'postDateFrom', 'postDateTo'];
+            selects.forEach(id => {
+                const select = document.getElementById(id);
+                select.innerHTML = dates.map(date =>
+                    `<option value="${date}">${date}</option>`
+                ).join('');
+            });
+
+            updatePeriodInfo();
+
+            // Add change listeners
+            selects.forEach(id => {
+                document.getElementById(id).addEventListener('change', updatePeriodInfo);
+            });
+        }
+
+        function updatePeriodInfo() {
+            const perFrom = document.getElementById('perDateFrom').value;
+            const perTo = document.getElementById('perDateTo').value;
+            const postFrom = document.getElementById('postDateFrom').value;
+            const postTo = document.getElementById('postDateTo').value;
+
+            let info = '<strong>Per Period:</strong> ';
+            info += perFrom === perTo ? `Single date (${perTo})` : `Average from ${perFrom} to ${perTo}`;
+            info += '<br><strong>Post Period:</strong> ';
+            info += postFrom === postTo ? `Single date (${postTo})` : `Average from ${postFrom} to ${postTo}`;
+
+            document.getElementById('periodInfo').innerHTML = info;
+        }
+
+        function populateDimensionSelects() {
+            populateMultiSelect('b2cC2cSelect', 'B2C_C2C_FLAG');
+            populateMultiSelect('sellerCntrySelect', 'SELLER_CNTRY_GROUP');
+            populateMultiSelect('focusCategorySelect', 'FOCUS_CATEGORY');
+        }
+
+        function populateMultiSelect(selectId, column) {
+            const values = [...new Set(rawData.map(row => row[column]))].filter(v => v).sort();
+            const select = document.getElementById(selectId);
+
+            let html = '<option value="Total" selected>Total (All)</option>';
+            values.forEach(value => {
+                html += `<option value="${value}">${value}</option>`;
+            });
+
+            select.innerHTML = html;
+        }
+
+        function updateMetricFormula() {
+            const metric = document.getElementById('keyMetricSelect').value;
+            const formula = metricFormulas[metric];
+            document.getElementById('metricFormula').innerHTML =
+                `<strong>Formula:</strong> ${metric} = ${formula}`;
+        }
+
+        function showError(message) {
+            const status = document.getElementById('uploadStatus');
+            status.innerHTML = `<div class="info-box" style="background: #ffebee; border-color: #f44336; color: #c62828;">❌ ${message}</div>`;
+        }
+
+        // Calculate key metric
+        function calculateMetric(row, metric) {
+            const gmv = row.GMV || 0;
+            if (gmv === 0) return 0;
+
+            switch(metric) {
+                case 'PLG_Rev_Pen':
+                    return (row.PLG_REV_NET || 0) / gmv;
+                case 'PLP_Rev_Pen':
+                    return (row.PLP_REV_NET || 0) / gmv;
+                case 'PO_Rev_Pen':
+                    return (row.PO_REV_NET || 0) / gmv;
+                case 'PS_Rev_Pen':
+                    return (row.PS_REV_NET || 0) / gmv;
+                case 'Ads_Rev_Pen':
+                    return ((row.PLG_REV_NET || 0) + (row.PLP_REV_NET || 0) +
+                            (row.PO_REV_NET || 0) + (row.PS_REV_NET || 0)) / gmv;
+                case 'PLG_Adoption':
+                    return (row.PLG_ENABLED_GMV || 0) / gmv;
+                case 'PLP_Adoption':
+                    return (row.PLP_ENABLED_GMV || 0) / gmv;
+                default:
+                    return 0;
+            }
+        }
+
+        // Filter data by time period
+        function filterByTimePeriod(data, dateFrom, dateTo) {
+            return data.filter(row => {
+                const date = row.RTL_WEEK_BEG_DT;
+                return date >= dateFrom && date <= dateTo;
+            });
+        }
+
+        // Aggregate data
+        function aggregateData(data) {
+            const result = {
+                PLG_REV_NET: 0,
+                PLP_REV_NET: 0,
+                PO_REV_NET: 0,
+                PS_REV_NET: 0,
+                GMV: 0,
+                PLG_ENABLED_GMV: 0,
+                PLP_ENABLED_GMV: 0
+            };
+
+            data.forEach(row => {
+                result.PLG_REV_NET += (row.PLG_REV_NET || 0);
+                result.PLP_REV_NET += (row.PLP_REV_NET || 0);
+                result.PO_REV_NET += (row.PO_REV_NET || 0);
+                result.PS_REV_NET += (row.PS_REV_NET || 0);
+                result.GMV += (row.GMV || 0);
+                result.PLG_ENABLED_GMV += (row.PLG_ENABLED_GMV || 0);
+                result.PLP_ENABLED_GMV += (row.PLP_ENABLED_GMV || 0);
+            });
+
+            return result;
+        }
+
+        function getSelectedValues(selectId) {
+            const select = document.getElementById(selectId);
+            const selected = Array.from(select.selectedOptions).map(opt => opt.value);
+            return selected;
+        }
+
+        // Run analysis
+        function runAnalysis() {
+            try {
+                // Get configurations
+                const perFrom = document.getElementById('perDateFrom').value;
+                const perTo = document.getElementById('perDateTo').value;
+                const postFrom = document.getElementById('postDateFrom').value;
+                const postTo = document.getElementById('postDateTo').value;
+
+                const b2cC2c = getSelectedValues('b2cC2cSelect');
+                const sellerCntry = getSelectedValues('sellerCntrySelect');
+                const focusCategory = getSelectedValues('focusCategorySelect');
+
+                const diyDim1 = document.getElementById('diyDim1').value;
+                const diyDim2 = document.getElementById('diyDim2').value;
+
+                const keyMetric = document.getElementById('keyMetricSelect').value;
+
+                // Show loading
+                const resultsSection = document.getElementById('resultsSection');
+                resultsSection.innerHTML = '<div class="loading"><div class="spinner"></div>Calculating mix analysis...</div>';
+                resultsSection.classList.remove('hidden');
+
+                // Perform analysis
+                setTimeout(() => {
+                    const results = performMixAnalysis({
+                        perFrom, perTo, postFrom, postTo,
+                        b2cC2c, sellerCntry, focusCategory,
+                        diyDim1, diyDim2, keyMetric
+                    });
+
+                    analysisResults = results;
+                    displayResults(results);
+                }, 100);
+
+            } catch (error) {
+                showError('Error during analysis: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        function performMixAnalysis(config) {
+            const results = {
+                config: config,
+                dimensions: [],
+                summary: {}
+            };
+
+            // Filter data by time periods
+            const perData = filterByTimePeriod(rawData, config.perFrom, config.perTo);
+            const postData = filterByTimePeriod(rawData, config.postFrom, config.postTo);
+
+            // Calculate total GMV for shares
+            const totalGmvPer = perData.reduce((sum, row) => sum + (row.GMV || 0), 0);
+            const totalGmvPost = postData.reduce((sum, row) => sum + (row.GMV || 0), 0);
+
+            // Calculate overall metrics
+            const aggPer = aggregateData(perData);
+            const aggPost = aggregateData(postData);
+            const metricPer = calculateMetric(aggPer, config.keyMetric);
+            const metricPost = calculateMetric(aggPost, config.keyMetric);
+
+            results.summary = {
+                metricPer,
+                metricPost,
+                totalPerformanceEffect: 0,
+                totalMixEffect: 0
+            };
+
+            // Always analyze the 3 main dimensions
+            const dimensions = [
+                { name: 'B2C_C2C', column: 'B2C_C2C_FLAG', values: config.b2cC2c },
+                { name: 'Seller_Cntry', column: 'SELLER_CNTRY_GROUP', values: config.sellerCntry },
+                { name: 'Focus_Category', column: 'FOCUS_CATEGORY', values: config.focusCategory }
+            ];
+
+            // Filter data by selected dimension values (if not "Total")
+            let filteredPerData = perData;
+            let filteredPostData = postData;
+
+            dimensions.forEach(dim => {
+                if (!dim.values.includes('Total')) {
+                    // User selected specific values - filter data
+                    filteredPerData = filteredPerData.filter(row => dim.values.includes(row[dim.column]));
+                    filteredPostData = filteredPostData.filter(row => dim.values.includes(row[dim.column]));
+                }
+            });
+
+            // Analyze each dimension with filtered data
+            dimensions.forEach(dim => {
+                const dimResults = analyzeDimension(
+                    filteredPerData, filteredPostData, dim, config.keyMetric,
+                    totalGmvPer, totalGmvPost
+                );
+                if (dimResults.length > 0) {
+                    results.dimensions.push({
+                        name: dim.name,
+                        results: dimResults
+                    });
+                }
+            });
+
+            // DIY dimension
+            if (config.diyDim1 && config.diyDim2 && config.diyDim1 !== config.diyDim2) {
+                const diyResults = analyzeDIYDimension(
+                    filteredPerData, filteredPostData, config.diyDim1, config.diyDim2,
+                    config.keyMetric, totalGmvPer, totalGmvPost
+                );
+                if (diyResults.length > 0) {
+                    results.dimensions.push({
+                        name: `DIY: ${getDimensionLabel(config.diyDim1)} × ${getDimensionLabel(config.diyDim2)}`,
+                        results: diyResults
+                    });
+                }
+            }
+
+            // Calculate total effects from FIRST dimension only (not summing all dimensions)
+            // The first dimension represents the complete breakdown
+            if (results.dimensions.length > 0) {
+                results.dimensions[0].results.forEach(row => {
+                    results.summary.totalPerformanceEffect += row.performanceEffect;
+                    results.summary.totalMixEffect += row.mixEffect;
+                });
+            }
+
+            return results;
+        }
+
+        function analyzeDimension(perData, postData, dimension, keyMetric, totalGmvPer, totalGmvPost) {
+            // Get unique values from the data
+            const allValues = new Set(rawData.map(row => row[dimension.column]).filter(v => v));
+            const values = Array.from(allValues).sort();
+
+            const results = [];
+
+            values.forEach(value => {
+                const perFiltered = perData.filter(row => row[dimension.column] === value);
+                const postFiltered = postData.filter(row => row[dimension.column] === value);
+
+                // Skip if no data for this value
+                if (perFiltered.length === 0 && postFiltered.length === 0) return;
+
+                const aggPer = aggregateData(perFiltered);
+                const aggPost = aggregateData(postFiltered);
+
+                const metricPer = calculateMetric(aggPer, keyMetric);
+                const metricPost = calculateMetric(aggPost, keyMetric);
+
+                const sharePer = totalGmvPer > 0 ? aggPer.GMV / totalGmvPer : 0;
+                const sharePost = totalGmvPost > 0 ? aggPost.GMV / totalGmvPost : 0;
+
+                const performanceEffect = (metricPost - metricPer) * sharePer;
+                const mixEffect = (sharePost - sharePer) * metricPost;
+
+                results.push({
+                    value,
+                    metricPer,
+                    metricPost,
+                    sharePer,
+                    sharePost,
+                    performanceEffect,
+                    mixEffect,
+                    totalEffect: performanceEffect + mixEffect
+                });
+            });
+
+            // Sort by share (highest to lowest)
+            results.sort((a, b) => b.sharePer - a.sharePer);
+
+            return results;
+        }
+
+        function analyzeDIYDimension(perData, postData, dim1, dim2, keyMetric, totalGmvPer, totalGmvPost) {
+            const combinations = new Set();
+            rawData.forEach(row => {
+                if (row[dim1] && row[dim2]) {
+                    combinations.add(`${row[dim1]}|${row[dim2]}`);
+                }
+            });
+
+            const results = [];
+
+            combinations.forEach(combo => {
+                const [val1, val2] = combo.split('|');
+
+                const perFiltered = perData.filter(row =>
+                    row[dim1] === val1 && row[dim2] === val2
+                );
+                const postFiltered = postData.filter(row =>
+                    row[dim1] === val1 && row[dim2] === val2
+                );
+
+                // Skip if no data
+                if (perFiltered.length === 0 && postFiltered.length === 0) return;
+
+                const aggPer = aggregateData(perFiltered);
+                const aggPost = aggregateData(postFiltered);
+
+                const metricPer = calculateMetric(aggPer, keyMetric);
+                const metricPost = calculateMetric(aggPost, keyMetric);
+
+                const sharePer = totalGmvPer > 0 ? aggPer.GMV / totalGmvPer : 0;
+                const sharePost = totalGmvPost > 0 ? aggPost.GMV / totalGmvPost : 0;
+
+                const performanceEffect = (metricPost - metricPer) * sharePer;
+                const mixEffect = (sharePost - sharePer) * metricPost;
+
+                results.push({
+                    value: `${val1} | ${val2}`,
+                    metricPer,
+                    metricPost,
+                    sharePer,
+                    sharePost,
+                    performanceEffect,
+                    mixEffect,
+                    totalEffect: performanceEffect + mixEffect
+                });
+            });
+
+            // Sort by share
+            results.sort((a, b) => b.sharePer - a.sharePer);
+
+            return results;
+        }
+
+        function getDimensionLabel(column) {
+            const labels = {
+                'B2C_C2C_FLAG': 'B2C_C2C',
+                'SELLER_CNTRY_GROUP': 'Seller_Cntry',
+                'FOCUS_CATEGORY': 'Focus_Category'
+            };
+            return labels[column] || column;
+        }
+
+        function displayResults(results) {
+            const resultsSection = document.getElementById('resultsSection');
+            resultsSection.classList.remove('hidden');
+
+            // Summary cards
+            const summary = results.summary;
+            const delta = summary.metricPost - summary.metricPer;
+            const deltaClass = delta >= 0 ? 'positive' : 'negative';
+            const deltaSign = delta >= 0 ? '+' : '';
+
+            let html = `
+                <div class="section">
+                    <div class="section-title">📊 Mix Analysis Results</div>
+
+                    <div class="summary-cards">
+                        <div class="summary-card">
+                            <h3>Per Period ${results.config.keyMetric}</h3>
+                            <div class="value">${formatPercentage(summary.metricPer)}</div>
+                        </div>
+                        <div class="summary-card">
+                            <h3>Post Period ${results.config.keyMetric}</h3>
+                            <div class="value">${formatPercentage(summary.metricPost)}</div>
+                            <div class="delta ${deltaClass}">${deltaSign}${formatPercentage(delta)}</div>
+                        </div>
+                        <div class="summary-card">
+                            <h3>Total Performance Effect</h3>
+                            <div class="value ${Math.abs(summary.totalPerformanceEffect) > 0.00015 ? (summary.totalPerformanceEffect >= 0 ? 'positive-effect' : 'negative-effect') : ''}">
+                                ${formatPercentage(summary.totalPerformanceEffect)}
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <h3>Total Mix Effect</h3>
+                            <div class="value ${Math.abs(summary.totalMixEffect) > 0.00015 ? (summary.totalMixEffect >= 0 ? 'positive-effect' : 'negative-effect') : ''}">
+                                ${formatPercentage(summary.totalMixEffect)}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="dimensionResults">
+                        <h3 style="margin: 30px 0 20px; color: #2c3e50;">Detailed Results by Dimension</h3>
+            `;
+
+            // Dimension results
+            results.dimensions.forEach((dim, index) => {
+                html += createDimensionSection(dim, results.config.keyMetric, index);
+            });
+
+            html += `
+                    </div>
+
+                    <div class="button-group" style="display: flex; align-items: center; justify-content: center; gap: 15px; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <label for="walkDimensionSelect" style="font-weight: 600; color: #111820; font-size: 0.95rem;">Walk Dimension:</label>
+                            <select id="walkDimensionSelect" style="padding: 10px 15px; border: 2px solid #e1e8ed; border-radius: 6px; font-size: 1rem; min-width: 180px; cursor: pointer;">
+                                <option value="B2C_C2C">B2C_C2C</option>
+                                <option value="Seller_Cntry">Seller_Cntry</option>
+                                <option value="Focus_Category">Focus_Category</option>
+                            </select>
+                        </div>
+                        <button class="btn" onclick="createWaterfallChart()">📊 Create Walk Chart</button>
+                        <button class="btn btn-export" onclick="exportToExcel()">📥 Export to Excel</button>
+                        <button class="btn btn-success" onclick="saveAndEmailReport()">💾 Download Report</button>
+                        <button class="btn" onclick="saveDashboardWithData()" style="background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%); color: white;">💾 Save Dashboard</button>
+                    </div>
+                </div>
+
+                <!-- Waterfall Chart -->
+                <div id="chartContainer" class="hidden">
+                    <div class="chart-container">
+                        <h2 style="margin-bottom: 20px; color: #2c3e50;">🌊 Mix Impact Waterfall Chart</h2>
+                        <div class="chart-wrapper">
+                            <canvas id="waterfallChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            resultsSection.innerHTML = html;
+        }
+
+        function createDimensionSection(dimension, keyMetric, index) {
+            const isExpanded = index === 0;
+
+            // Determine threshold based on dimension index
+            // B2C_C2C (index 0): 0.015% threshold
+            // Seller_Cntry, Focus_Category, DIY (index 1+): 0.01% threshold
+            const threshold = index === 0 ? 0.00015 : 0.0001;
+
+            // Calculate totals
+            const totals = {
+                metricPer: 0,
+                metricPost: 0,
+                sharePer: 0,
+                sharePost: 0,
+                performanceEffect: 0,
+                mixEffect: 0,
+                totalEffect: 0
+            };
+
+            dimension.results.forEach(row => {
+                totals.sharePer += row.sharePer;
+                totals.sharePost += row.sharePost;
+                totals.performanceEffect += row.performanceEffect;
+                totals.mixEffect += row.mixEffect;
+                totals.totalEffect += row.totalEffect;
+            });
+
+            // Weighted average for metrics
+            if (totals.sharePer > 0) {
+                dimension.results.forEach(row => {
+                    totals.metricPer += row.metricPer * (row.sharePer / totals.sharePer);
+                });
+            }
+            if (totals.sharePost > 0) {
+                dimension.results.forEach(row => {
+                    totals.metricPost += row.metricPost * (row.sharePost / totals.sharePost);
+                });
+            }
+
+            let html = `
+                <div class="dimension-section">
+                    <div class="dimension-header" onclick="toggleDimension(this)">
+                        <h3>${dimension.name} (${dimension.results.length} values)</h3>
+                        <span class="dimension-toggle ${isExpanded ? '' : 'collapsed'}">▼</span>
+                    </div>
+                    <div class="dimension-content ${isExpanded ? '' : 'collapsed'}">
+                        <table class="results-table">
+                            <thead>
+                                <tr>
+                                    <th>Dimension Value</th>
+                                    <th>Per ${keyMetric}</th>
+                                    <th>Post ${keyMetric}</th>
+                                    <th>Per Share</th>
+                                    <th>Post Share</th>
+                                    <th>Performance Effect</th>
+                                    <th>Mix Effect</th>
+                                    <th>Total Effect</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+
+            dimension.results.forEach(row => {
+                html += `
+                    <tr>
+                        <td><strong>${row.value}</strong></td>
+                        <td class="percentage">${formatPercentage(row.metricPer)}</td>
+                        <td class="percentage">${formatPercentage(row.metricPost)}</td>
+                        <td class="percentage">${formatPercentage(row.sharePer)}</td>
+                        <td class="percentage">${formatPercentage(row.sharePost)}</td>
+                        <td class="percentage ${row.performanceEffect > threshold ? 'positive-effect-strong' : (row.performanceEffect < -threshold ? 'negative-effect-strong' : '')}">
+                            ${formatPercentage(row.performanceEffect)}
+                        </td>
+                        <td class="percentage ${row.mixEffect > threshold ? 'positive-effect-strong' : (row.mixEffect < -threshold ? 'negative-effect-strong' : '')}">
+                            ${formatPercentage(row.mixEffect)}
+                        </td>
+                        <td class="percentage ${row.totalEffect > threshold ? 'positive-effect-strong' : (row.totalEffect < -threshold ? 'negative-effect-strong' : '')}">
+                            ${formatPercentage(row.totalEffect)}
+                        </td>
+                    </tr>
+                `;
+            });
+
+            // Add total row
+            html += `
+                <tr class="total-row">
+                    <td><strong>TOTAL</strong></td>
+                    <td class="percentage">${formatPercentage(totals.metricPer)}</td>
+                    <td class="percentage">${formatPercentage(totals.metricPost)}</td>
+                    <td class="percentage">${formatPercentage(totals.sharePer)}</td>
+                    <td class="percentage">${formatPercentage(totals.sharePost)}</td>
+                    <td class="percentage ${totals.performanceEffect > threshold ? 'positive-effect-strong' : (totals.performanceEffect < -threshold ? 'negative-effect-strong' : '')}">
+                        ${formatPercentage(totals.performanceEffect)}
+                    </td>
+                    <td class="percentage ${totals.mixEffect > threshold ? 'positive-effect-strong' : (totals.mixEffect < -threshold ? 'negative-effect-strong' : '')}">
+                        ${formatPercentage(totals.mixEffect)}
+                    </td>
+                    <td class="percentage ${totals.totalEffect > threshold ? 'positive-effect-strong' : (totals.totalEffect < -threshold ? 'negative-effect-strong' : '')}">
+                        ${formatPercentage(totals.totalEffect)}
+                    </td>
+                </tr>
+            `;
+
+            html += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            return html;
+        }
+
+        function toggleDimension(header) {
+            const content = header.nextElementSibling;
+            const toggle = header.querySelector('.dimension-toggle');
+
+            content.classList.toggle('collapsed');
+            toggle.classList.toggle('collapsed');
+        }
+
+        function formatPercentage(value) {
+            return (value * 100).toFixed(4) + '%';
+        }
+
+        function createWaterfallChart() {
+            if (!analysisResults) {
+                alert('Please run analysis first!');
+                return;
+            }
+
+            try {
+                const chartContainer = document.getElementById('chartContainer');
+                chartContainer.classList.remove('hidden');
+
+                // Destroy previous chart if exists
+                if (chartInstance) {
+                    chartInstance.destroy();
+                    chartInstance = null;
+                }
+
+                // Get selected dimension for the walk
+                const selectedDimension = document.getElementById('walkDimensionSelect').value;
+
+                // Find the dimension data
+                const dimensionData = analysisResults.dimensions.find(dim => dim.name === selectedDimension);
+
+                if (!dimensionData) {
+                    alert('Selected dimension not found in results. Please run analysis first.');
+                    return;
+                }
+
+                // Build waterfall data using floating bars [start, end]
+                const labels = [];
+                const data = [];
+                const backgroundColors = [];
+                const deltaValues = []; // Store actual delta values for tooltip
+
+                // Starting point - show actual value
+                const startValue = analysisResults.summary.metricPer * 100;
+                labels.push('Per Period');
+                data.push([0, startValue]); // Floating bar from 0 to actual value
+                backgroundColors.push('rgba(0, 100, 210, 0.9)'); // eBay Blue
+                deltaValues.push(startValue);
+
+                let cumulativeValue = startValue;
+
+                // Add each dimension VALUE's total impact (performance + mix combined)
+                // Already sorted by share from highest to lowest
+                dimensionData.results.forEach(row => {
+                    const totalEffect = row.totalEffect * 100; // Performance + Mix combined
+
+                    // Only show if effect is significant
+                    if (Math.abs(totalEffect) > 0.0001) {
+                        labels.push(row.value);
+                        const startBar = cumulativeValue;
+                        const endBar = cumulativeValue + totalEffect;
+                        data.push([startBar, endBar]); // Floating bar showing the delta
+                        backgroundColors.push(totalEffect >= 0 ?
+                            'rgba(134, 184, 23, 0.85)' : 'rgba(229, 50, 56, 0.85)'); // eBay Green / Red
+                        deltaValues.push(totalEffect);
+                        cumulativeValue = endBar;
+                    }
+                });
+
+                // Ending point - show actual value
+                const endValue = analysisResults.summary.metricPost * 100;
+                labels.push('Post Period');
+                data.push([0, endValue]); // Floating bar from 0 to actual value
+                backgroundColors.push('rgba(0, 100, 210, 0.9)'); // eBay Blue
+                deltaValues.push(endValue);
+
+                console.log('Waterfall chart data:', { labels, data, backgroundColors, deltaValues });
+
+                // Create new chart
+                const ctx = document.getElementById('waterfallChart');
+                if (!ctx) {
+                    console.error('Canvas element not found');
+                    return;
+                }
+
+                const context = ctx.getContext('2d');
+                chartInstance = new Chart(context, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: analysisResults.config.keyMetric,
+                            data: data,
+                            backgroundColor: backgroundColors,
+                            borderColor: backgroundColors.map(c => c.replace('0.8', '1').replace('0.9', '1')),
+                            borderWidth: 2,
+                            barPercentage: 0.7,
+                            datalabels: {
+                                anchor: 'end',
+                                align: 'top',
+                                offset: 4,
+                                font: {
+                                    size: 16,
+                                    weight: 'bold'
+                                },
+                                color: '#2c3e50',
+                                formatter: function(value, context) {
+                                    const index = context.dataIndex;
+                                    const deltaValue = deltaValues[index];
+
+                                    // For first and last bars (totals), show the actual value
+                                    if (index === 0 || index === labels.length - 1) {
+                                        return deltaValue.toFixed(2) + '%';
+                                    } else {
+                                        // For delta bars, show the change with sign
+                                        const sign = deltaValue >= 0 ? '+' : '';
+                                        return sign + deltaValue.toFixed(2) + '%';
+                                    }
+                                },
+                                backgroundColor: function(context) {
+                                    return 'rgba(255, 255, 255, 0.9)';
+                                },
+                                borderRadius: 4,
+                                padding: 6
+                            }
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            title: {
+                                display: true,
+                                text: 'Mix Impact Walk: ' + analysisResults.config.keyMetric + ' by ' + selectedDimension,
+                                font: {
+                                    size: 18,
+                                    weight: 'bold'
+                                },
+                                padding: 20
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const index = context.dataIndex;
+                                        const deltaValue = deltaValues[index];
+                                        const barData = context.parsed;
+
+                                        // For first and last bars (totals), show the actual value
+                                        if (index === 0 || index === labels.length - 1) {
+                                            return 'Value: ' + deltaValue.toFixed(4) + '%';
+                                        } else {
+                                            // For delta bars, show the change
+                                            const sign = deltaValue >= 0 ? '+' : '';
+                                            return 'Change: ' + sign + deltaValue.toFixed(4) + '%';
+                                        }
+                                    },
+                                    afterLabel: function(context) {
+                                        const index = context.dataIndex;
+                                        // Show cumulative value for delta bars
+                                        if (index > 0 && index < labels.length - 1) {
+                                            const barData = data[index];
+                                            const cumulative = Array.isArray(barData) ? barData[1] : barData;
+                                            return 'Cumulative: ' + cumulative.toFixed(4) + '%';
+                                        }
+                                        return '';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toFixed(2) + '%';
+                                    },
+                                    font: {
+                                        size: 12
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: analysisResults.config.keyMetric,
+                                    font: {
+                                        size: 14,
+                                        weight: 'bold'
+                                    }
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    font: {
+                                        size: 11
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Mix Impact Components',
+                                    font: {
+                                        size: 14,
+                                        weight: 'bold'
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    plugins: [ChartDataLabels]
+                });
+
+                console.log('Waterfall chart created successfully');
+
+                // Scroll to chart
+                setTimeout(() => {
+                    chartContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+
+            } catch (error) {
+                console.error('Error creating chart:', error);
+                alert('Error creating chart: ' + error.message);
+            }
+        }
+
+        function exportToExcel() {
+            if (!analysisResults) {
+                alert('Please run analysis first!');
+                return;
+            }
+
+            // Prepare data for export
+            const exportData = [];
+
+            analysisResults.dimensions.forEach(dim => {
+                dim.results.forEach(row => {
+                    exportData.push({
+                        'Dimension': dim.name,
+                        'Value': row.value,
+                        'Per Metric (%)': (row.metricPer * 100).toFixed(4),
+                        'Post Metric (%)': (row.metricPost * 100).toFixed(4),
+                        'Per Share (%)': (row.sharePer * 100).toFixed(4),
+                        'Post Share (%)': (row.sharePost * 100).toFixed(4),
+                        'Performance Effect (%)': (row.performanceEffect * 100).toFixed(4),
+                        'Mix Effect (%)': (row.mixEffect * 100).toFixed(4),
+                        'Total Effect (%)': (row.totalEffect * 100).toFixed(4)
+                    });
+                });
+
+                // Add total row for each dimension
+                const totals = {
+                    sharePer: 0,
+                    sharePost: 0,
+                    performanceEffect: 0,
+                    mixEffect: 0,
+                    totalEffect: 0,
+                    metricPer: 0,
+                    metricPost: 0
+                };
+
+                dim.results.forEach(row => {
+                    totals.sharePer += row.sharePer;
+                    totals.sharePost += row.sharePost;
+                    totals.performanceEffect += row.performanceEffect;
+                    totals.mixEffect += row.mixEffect;
+                    totals.totalEffect += row.totalEffect;
+                });
+
+                if (totals.sharePer > 0) {
+                    dim.results.forEach(row => {
+                        totals.metricPer += row.metricPer * (row.sharePer / totals.sharePer);
+                    });
+                }
+                if (totals.sharePost > 0) {
+                    dim.results.forEach(row => {
+                        totals.metricPost += row.metricPost * (row.sharePost / totals.sharePost);
+                    });
+                }
+
+                exportData.push({
+                    'Dimension': dim.name,
+                    'Value': 'TOTAL',
+                    'Per Metric (%)': (totals.metricPer * 100).toFixed(4),
+                    'Post Metric (%)': (totals.metricPost * 100).toFixed(4),
+                    'Per Share (%)': (totals.sharePer * 100).toFixed(4),
+                    'Post Share (%)': (totals.sharePost * 100).toFixed(4),
+                    'Performance Effect (%)': (totals.performanceEffect * 100).toFixed(4),
+                    'Mix Effect (%)': (totals.mixEffect * 100).toFixed(4),
+                    'Total Effect (%)': (totals.totalEffect * 100).toFixed(4)
+                });
+            });
+
+            // Create worksheet
+            const ws = XLSX.utils.json_to_sheet(exportData);
+
+            // Create workbook
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Mix Analysis');
+
+            // Generate filename
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const filename = `mix_analysis_${analysisResults.config.keyMetric}_${timestamp}.xlsx`;
+
+            // Save file
+            XLSX.writeFile(wb, filename);
+        }
+
+        function saveAndEmailReport() {
+            if (!analysisResults) {
+                alert('Please run analysis first!');
+                return;
+            }
+
+            try {
+                // Generate HTML report with embedded chart
+                const reportHTML = generateHTMLReport();
+
+                // Create blob and download
+                const blob = new Blob([reportHTML], { type: 'text/html;charset=utf-8' });
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                const filename = `Mix_Analysis_Report_${analysisResults.config.keyMetric}_${timestamp}.html`;
+
+                // Download the file
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                link.click();
+
+                // Copy email content to clipboard and show instructions
+                setTimeout(() => {
+                    copyEmailContentToClipboard(filename);
+                }, 800);
+
+            } catch (error) {
+                console.error('Error generating report:', error);
+                alert('Error generating report: ' + error.message);
+            }
+        }
+
+        function generateHTMLReport() {
+            const config = analysisResults.config;
+            const summary = analysisResults.summary;
+
+            // Capture chart as base64 image if it exists
+            let chartImageBase64 = '';
+            if (chartInstance) {
+                try {
+                    chartImageBase64 = chartInstance.toBase64Image();
+                } catch (e) {
+                    console.warn('Could not capture chart:', e);
+                }
+            }
+
+            // Build the HTML report
+            let html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mix Analysis Report - ${config.keyMetric}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #0064D2 0%, #0654BA 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2rem; margin-bottom: 10px; }
+        .header p { font-size: 1rem; opacity: 0.95; }
+        .content { padding: 30px; }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            border-left: 4px solid #0064D2;
+        }
+        .section-title {
+            font-size: 1.3rem;
+            color: #111820;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        .info-row {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .info-label { font-weight: 600; color: #555; }
+        .info-value { color: #111820; }
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .summary-card {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 8px;
+            border-top: 3px solid #0064D2;
+            text-align: center;
+        }
+        .summary-card h3 {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        .summary-card .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #111820;
+        }
+        .positive { color: #86B817; }
+        .negative { color: #E53238; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9rem;
+        }
+        th {
+            background: linear-gradient(135deg, #0064D2 0%, #0654BA 100%);
+            color: white;
+            padding: 12px 10px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+        tr:hover { background: #f7fafc; }
+        .total-row {
+            background: #fff9e6;
+            font-weight: bold;
+            border-top: 2px solid #F5AF02;
+            border-bottom: 2px solid #F5AF02;
+        }
+        .chart-section {
+            margin-top: 30px;
+            text-align: center;
+        }
+        .chart-section img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e5e5;
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Ads Revenue Mix Analysis Report</h1>
+            <p>Generated on ${new Date().toLocaleString()}</p>
+        </div>
+
+        <div class="content">
+            <div class="section">
+                <div class="section-title">Analysis Configuration</div>
+                <div class="info-row">
+                    <div class="info-label">Key Metric:</div>
+                    <div class="info-value">${config.keyMetric}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Per Period:</div>
+                    <div class="info-value">${config.perFrom} to ${config.perTo}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Post Period:</div>
+                    <div class="info-value">${config.postFrom} to ${config.postTo}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">B2C/C2C Filter:</div>
+                    <div class="info-value">${config.b2cC2c.join(', ')}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Seller Country Filter:</div>
+                    <div class="info-value">${config.sellerCntry.join(', ')}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Focus Category Filter:</div>
+                    <div class="info-value">${config.focusCategory.join(', ')}</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Summary Results</div>
+                <div class="summary-cards">
+                    <div class="summary-card">
+                        <h3>Per Period ${config.keyMetric}</h3>
+                        <div class="value">${formatPercentage(summary.metricPer)}</div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>Post Period ${config.keyMetric}</h3>
+                        <div class="value">${formatPercentage(summary.metricPost)}</div>
+                        <div class="${summary.metricPost - summary.metricPer >= 0 ? 'positive' : 'negative'}" style="font-size: 1rem; margin-top: 8px; font-weight: 600;">
+                            ${(summary.metricPost - summary.metricPer >= 0 ? '+' : '')}${formatPercentage(summary.metricPost - summary.metricPer)}
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>Total Performance Effect</h3>
+                        <div class="value ${summary.totalPerformanceEffect >= 0 ? 'positive' : 'negative'}">
+                            ${formatPercentage(summary.totalPerformanceEffect)}
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>Total Mix Effect</h3>
+                        <div class="value ${summary.totalMixEffect >= 0 ? 'positive' : 'negative'}">
+                            ${formatPercentage(summary.totalMixEffect)}
+                        </div>
+                    </div>
+                </div>
+            </div>
+`;
+
+            // Add dimension results
+            analysisResults.dimensions.forEach(dim => {
+                html += generateDimensionHTML(dim, config.keyMetric);
+            });
+
+            // Add chart if available
+            if (chartImageBase64) {
+                html += `
+            <div class="chart-section">
+                <div class="section">
+                    <div class="section-title">Mix Impact Waterfall Chart</div>
+                    <img src="${chartImageBase64}" alt="Waterfall Chart">
+                </div>
+            </div>
+`;
+            }
+
+            html += `
+            <div class="footer">
+                Generated by Ads Revenue Mix Analysis Dashboard
+            </div>
+        </div>
+    </div>
+</body>
+</html>`;
+
+            return html;
+        }
+
+        function generateDimensionHTML(dimension, keyMetric) {
+            const totals = {
+                sharePer: 0,
+                sharePost: 0,
+                performanceEffect: 0,
+                mixEffect: 0,
+                totalEffect: 0,
+                metricPer: 0,
+                metricPost: 0
+            };
+
+            dimension.results.forEach(row => {
+                totals.sharePer += row.sharePer;
+                totals.sharePost += row.sharePost;
+                totals.performanceEffect += row.performanceEffect;
+                totals.mixEffect += row.mixEffect;
+                totals.totalEffect += row.totalEffect;
+            });
+
+            if (totals.sharePer > 0) {
+                dimension.results.forEach(row => {
+                    totals.metricPer += row.metricPer * (row.sharePer / totals.sharePer);
+                });
+            }
+            if (totals.sharePost > 0) {
+                dimension.results.forEach(row => {
+                    totals.metricPost += row.metricPost * (row.sharePost / totals.sharePost);
+                });
+            }
+
+            let html = `
+            <div class="section">
+                <div class="section-title">${dimension.name}</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Value</th>
+                            <th>Per ${keyMetric}</th>
+                            <th>Post ${keyMetric}</th>
+                            <th>Per Share</th>
+                            <th>Post Share</th>
+                            <th>Performance Effect</th>
+                            <th>Mix Effect</th>
+                            <th>Total Effect</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+`;
+
+            dimension.results.forEach(row => {
+                html += `
+                        <tr>
+                            <td><strong>${row.value}</strong></td>
+                            <td>${formatPercentage(row.metricPer)}</td>
+                            <td>${formatPercentage(row.metricPost)}</td>
+                            <td>${formatPercentage(row.sharePer)}</td>
+                            <td>${formatPercentage(row.sharePost)}</td>
+                            <td class="${row.performanceEffect >= 0 ? 'positive' : 'negative'}">
+                                ${formatPercentage(row.performanceEffect)}
+                            </td>
+                            <td class="${row.mixEffect >= 0 ? 'positive' : 'negative'}">
+                                ${formatPercentage(row.mixEffect)}
+                            </td>
+                            <td class="${row.totalEffect >= 0 ? 'positive' : 'negative'}">
+                                ${formatPercentage(row.totalEffect)}
+                            </td>
+                        </tr>
+`;
+            });
+
+            html += `
+                        <tr class="total-row">
+                            <td><strong>TOTAL</strong></td>
+                            <td>${formatPercentage(totals.metricPer)}</td>
+                            <td>${formatPercentage(totals.metricPost)}</td>
+                            <td>${formatPercentage(totals.sharePer)}</td>
+                            <td>${formatPercentage(totals.sharePost)}</td>
+                            <td class="${totals.performanceEffect >= 0 ? 'positive' : 'negative'}">
+                                ${formatPercentage(totals.performanceEffect)}
+                            </td>
+                            <td class="${totals.mixEffect >= 0 ? 'positive' : 'negative'}">
+                                ${formatPercentage(totals.mixEffect)}
+                            </td>
+                            <td class="${totals.totalEffect >= 0 ? 'positive' : 'negative'}">
+                                ${formatPercentage(totals.totalEffect)}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+`;
+
+            return html;
+        }
+
+        function generateEmailContent(filename) {
+            const summary = analysisResults.summary;
+            const config = analysisResults.config;
+
+            let bodyText = `Hi,\n\n`;
+            bodyText += `Please find below the Mix Analysis Report summary:\n\n`;
+            bodyText += `═══════════════════════════════════════════\n`;
+            bodyText += `📊 ANALYSIS SUMMARY\n`;
+            bodyText += `═══════════════════════════════════════════\n\n`;
+
+            bodyText += `Configuration:\n`;
+            bodyText += `• Metric: ${config.keyMetric}\n`;
+            bodyText += `• Per Period: ${config.perFrom} to ${config.perTo}\n`;
+            bodyText += `• Post Period: ${config.postFrom} to ${config.postTo}\n\n`;
+
+            bodyText += `Key Results:\n`;
+            bodyText += `• Per Period ${config.keyMetric}: ${formatPercentage(summary.metricPer)}\n`;
+            bodyText += `• Post Period ${config.keyMetric}: ${formatPercentage(summary.metricPost)}\n`;
+            const delta = summary.metricPost - summary.metricPer;
+            const deltaSign = delta >= 0 ? '↑' : '↓';
+            bodyText += `• Change: ${deltaSign} ${formatPercentage(Math.abs(delta))} ${delta >= 0 ? '(positive)' : '(negative)'}\n`;
+            bodyText += `• Total Performance Effect: ${formatPercentage(summary.totalPerformanceEffect)}\n`;
+            bodyText += `• Total Mix Effect: ${formatPercentage(summary.totalMixEffect)}\n\n`;
+
+            bodyText += `───────────────────────────────────────────\n`;
+            bodyText += `DETAILED BREAKDOWN BY DIMENSION\n`;
+            bodyText += `───────────────────────────────────────────\n\n`;
+
+            analysisResults.dimensions.forEach(dim => {
+                bodyText += `${dim.name}:\n`;
+                const topResults = dim.results.slice(0, 5);
+                topResults.forEach(row => {
+                    const effect = row.totalEffect >= 0 ? '↑' : '↓';
+                    bodyText += `  • ${row.value}: ${effect} ${formatPercentage(Math.abs(row.totalEffect))}\n`;
+                });
+                bodyText += `\n`;
+            });
+
+            bodyText += `═══════════════════════════════════════════\n\n`;
+            bodyText += `📎 Detailed HTML report attached: ${filename}\n`;
+            bodyText += `   (Please attach the downloaded file when sending)\n\n`;
+            bodyText += `Generated: ${new Date().toLocaleString()}\n\n`;
+            bodyText += `Best regards`;
+
+            return {
+                subject: `Mix Analysis Report - ${config.keyMetric}`,
+                body: bodyText
+            };
+        }
+
+        function copyEmailContentToClipboard(filename) {
+            const emailContent = generateEmailContent(filename);
+            const fullContent = `Subject: ${emailContent.subject}\n\n${emailContent.body}`;
+
+            navigator.clipboard.writeText(fullContent).then(() => {
+                const message =
+                    `✅ Report downloaded and email content copied to clipboard!\n\n` +
+                    `Next steps:\n` +
+                    `1. Open Outlook.app\n` +
+                    `2. Create a new email (Cmd+N)\n` +
+                    `3. Paste the content (Cmd+V)\n` +
+                    `4. Attach the downloaded HTML file: ${filename}\n` +
+                    `5. Add recipients and send!\n\n` +
+                    `The subject and body are ready in your clipboard.`;
+
+                alert(message);
+            }).catch(err => {
+                console.error('Failed to copy to clipboard:', err);
+                const emailContent = generateEmailContent(filename);
+
+                const fallbackMessage =
+                    `✅ Report downloaded!\n\n` +
+                    `Email Subject:\n${emailContent.subject}\n\n` +
+                    `Copy the email body from the console (press F12 to open developer tools).\n` +
+                    `Attach file: ${filename}`;
+
+                console.log('='.repeat(50));
+                console.log('EMAIL SUBJECT:');
+                console.log(emailContent.subject);
+                console.log('\nEMAIL BODY:');
+                console.log(emailContent.body);
+                console.log('='.repeat(50));
+
+                alert(fallbackMessage);
+            });
+        }
+
+        function saveDashboardWithData() {
+            if (!analysisResults || !rawData || rawData.length === 0) {
+                alert('Please upload data and run analysis first!');
+                return;
+            }
+
+            try {
+                // Get the current HTML document
+                const currentHTML = document.documentElement.outerHTML;
+
+                // Find the script tag and inject the data before it closes
+                const scriptEndTag = '<' + '/script>';
+                const scriptEndIndex = currentHTML.lastIndexOf(scriptEndTag);
+
+                if (scriptEndIndex === -1) {
+                    alert('Error: Could not find script tag');
+                    return;
+                }
+
+                // Create embedded data script using string concatenation
+                let embeddedDataScript = '\n\n';
+                embeddedDataScript += '        // ========== EMBEDDED DATA - AUTO-LOADED ==========\n';
+                embeddedDataScript += '        // This dashboard contains pre-loaded data and results\n\n';
+                embeddedDataScript += '        window.EMBEDDED_DATA = ' + JSON.stringify(rawData) + ';\n';
+                embeddedDataScript += '        window.EMBEDDED_RESULTS = ' + JSON.stringify(analysisResults) + ';\n\n';
+                embeddedDataScript += '        // Auto-load embedded data when page loads\n';
+                embeddedDataScript += '        window.addEventListener(\'load\', function() {\n';
+                embeddedDataScript += '            if (window.EMBEDDED_DATA && window.EMBEDDED_RESULTS) {\n';
+                embeddedDataScript += '                rawData = window.EMBEDDED_DATA;\n';
+                embeddedDataScript += '                analysisResults = window.EMBEDDED_RESULTS;\n\n';
+                embeddedDataScript += '                // Collapse the data input section by default\n';
+                embeddedDataScript += '                const content = document.getElementById(\'collapsibleContent\');\n';
+                embeddedDataScript += '                const toggle = document.getElementById(\'collapseToggle\');\n';
+                embeddedDataScript += '                if (content && toggle) {\n';
+                embeddedDataScript += '                    content.classList.add(\'collapsed\');\n';
+                embeddedDataScript += '                    toggle.classList.add(\'collapsed\');\n';
+                embeddedDataScript += '                    content.style.maxHeight = \'0\';\n';
+                embeddedDataScript += '                }\n\n';
+                embeddedDataScript += '                // Display the results\n';
+                embeddedDataScript += '                displayResults(analysisResults);\n\n';
+                embeddedDataScript += '                // Show a notification\n';
+                embeddedDataScript += '                const notification = document.createElement(\'div\');\n';
+                embeddedDataScript += '                notification.style.cssText = \'position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #86B817 0%, #6d9614 100%); color: white; padding: 15px 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 10000; font-weight: 600;\';\n';
+                embeddedDataScript += '                notification.textContent = \'✅ Dashboard loaded with embedded data!\';\n';
+                embeddedDataScript += '                document.body.appendChild(notification);\n\n';
+                embeddedDataScript += '                setTimeout(function() {\n';
+                embeddedDataScript += '                    notification.style.transition = \'opacity 0.5s\';\n';
+                embeddedDataScript += '                    notification.style.opacity = \'0\';\n';
+                embeddedDataScript += '                    setTimeout(function() { notification.remove(); }, 500);\n';
+                embeddedDataScript += '                }, 3000);\n';
+                embeddedDataScript += '            }\n';
+                embeddedDataScript += '        });\n';
+                embeddedDataScript += '        // ========== END EMBEDDED DATA ==========\n';
+
+                // Insert the embedded data script before the closing script tag
+                const newHTML =
+                    currentHTML.substring(0, scriptEndIndex) +
+                    embeddedDataScript +
+                    currentHTML.substring(scriptEndIndex);
+
+                // Create blob and download
+                const blob = new Blob([newHTML], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+
+                // Generate filename with timestamp
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                const filename = 'ads_mix_dashboard_with_data_' + timestamp + '.html';
+                a.download = filename;
+
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                alert('✅ Dashboard saved successfully!\n\nFile: ' + filename + '\n\nYou can share this file with others. When they open it, the data and analysis will be automatically loaded!');
+            } catch (error) {
+                console.error('Error saving dashboard:', error);
+                alert('Error saving dashboard. Please check the console for details.');
+            }
+        }
+    </script>
+</body>
+</html>
